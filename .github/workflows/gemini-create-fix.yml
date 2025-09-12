@@ -1,0 +1,129 @@
+name: '🔧 Gemini Create Fix'
+
+on:
+  issue_comment:
+    types: [created]
+
+concurrency:
+  group: '${{ github.workflow }}-${{ github.event.issue.number }}'
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: 'bash'
+
+jobs:
+  create-fix:
+    runs-on: 'ubuntu-latest'
+    if: |
+      github.event.issue.state == 'open' &&
+      contains(github.event.comment.body, '@gemini-cli create-fix')
+    permissions:
+      contents: 'write'
+      id-token: 'write'
+      issues: 'write'
+      pull-requests: 'write'
+    steps:
+      - name: 'Mint identity token'
+        id: 'mint_identity_token'
+        if: |-
+          ${{ vars.APP_ID }}
+        uses: 'actions/create-github-app-token@a8d616148505b5069dccd32f177bb87d7f39123b' # ratchet:actions/create-github-app-token@v2
+        with:
+          app-id: '${{ vars.APP_ID }}'
+          private-key: '${{ secrets.APP_PRIVATE_KEY }}'
+          permission-contents: 'write'
+          permission-issues: 'write'
+          permission-pull-requests: 'write'
+
+      - name: 'Run Gemini CLI - Create Fix'
+        id: 'run_gemini_create_fix'
+        timeout-minutes: 10
+        uses: 'google-github-actions/run-gemini-cli@v0' # ratchet:exclude
+        env:
+          TITLE: '${{ github.event.issue.title }}'
+          DESCRIPTION: '${{ github.event.issue.body }}'
+          EVENT_NAME: '${{ github.event_name }}'
+          GITHUB_TOKEN: '${{ steps.mint_identity_token.outputs.token || secrets.REPO_TOKEN || github.token }}'
+          ISSUE_NUMBER: '${{ github.event.issue.number }}'
+          REPOSITORY: '${{ github.repository }}'
+          COMMENT_BODY: '${{ github.event.comment.body }}'
+        with:
+          gemini_api_key: '${{ secrets.GEMINI_API_KEY }}'
+          gcp_workload_identity_provider: '${{ vars.GCP_WIF_PROVIDER }}'
+          gcp_project_id: '${{ vars.GOOGLE_CLOUD_PROJECT }}'
+          gcp_location: '${{ vars.GOOGLE_CLOUD_LOCATION }}'
+          gcp_service_account: '${{ vars.SERVICE_ACCOUNT_EMAIL }}'
+          use_vertex_ai: '${{ vars.GOOGLE_GENAI_USE_VERTEXAI }}'
+          google_api_key: '${{ secrets.GOOGLE_API_KEY }}'
+          use_gemini_code_assist: '${{ vars.GOOGLE_GENAI_USE_GCA }}'
+          gemini_debug: true
+          gemini_model: '${{ vars.GEMINI_MODEL }}'
+          settings: |-
+            {
+              "maxSessionTurns": 15,
+              "telemetry": {
+                "enabled": ${{ vars.GOOGLE_CLOUD_PROJECT != '' }},
+                "target": "gcp"
+              },
+              "mcpServers": {
+                "github": {
+                  "command": "docker",
+                  "args": [
+                    "run",
+                    "-i",
+                    "--rm",
+                    "-e",
+                    "GITHUB_PERSONAL_ACCESS_TOKEN",
+                    "ghcr.io/github/github-mcp-server"
+                  ],
+                  "includeTools": [
+                    "get_issue_comments",
+                    "create_branch",
+                    "create_or_update_file",
+                    "add_issue_comment"
+                  ],
+                  "env": {
+                    "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
+                  }
+                }
+              }
+            }
+          prompt: |-
+            You are a security engineer implementing CVE fixes for repository ${{ env.REPOSITORY }}.
+
+            REPOSITORY CONTEXT: This repository contains container definitions for CNF features:
+            - ztp-site-generate container: ztp/resource-generator/Containerfile
+            - When triage mentions "Dockerfile for ztp-site-generate", use ztp/resource-generator/Containerfile
+            - Other containers may be in subdirectories with Dockerfile or Containerfile names
+
+            TASK: Create a fix branch for issue #${{ env.ISSUE_NUMBER }} based on the auto-triage analysis.
+
+            STEP 1 - READ TRIAGE ANALYSIS:
+            Use mcp__github__get_issue_comments with owner="abraham2512", repo="cnf-features-deploy", issue_number=${{ env.ISSUE_NUMBER }}
+            Parse the comment containing "Proposed Fix" or "CVE Analysis" to extract:
+            - File to modify (usually contains "Containerfile" or "Dockerfile")
+            - Specific fix command (usually contains "RUN chmod" or similar security command)
+            - Location details (usually mentions "before USER" or specific line references)
+
+            STEP 2 - CREATE BRANCH:
+            Use mcp__github__create_branch with owner="abraham2512", repo="cnf-features-deploy", branch="cve-fix-issue-${{ env.ISSUE_NUMBER }}-${{ github.run_number }}", from_branch="master"
+
+            STEP 3 - APPLY SECURITY FIX:
+            Based on the triage analysis from STEP 1, use ONLY mcp__github__create_or_update_file to:
+            - For ztp-site-generate container: modify "ztp/resource-generator/Containerfile"
+            - Extract the exact fix command from the "Proposed Fix" section of the triage analysis
+            - Apply that fix command at the location specified in the analysis (typically before USER instruction)
+            - Use a descriptive commit message mentioning the CVE and the specific change made
+            - DO NOT use shell commands or try to read current file content
+            - DO NOT make any other unrelated changes such as path updates, dictionary fixes or formatting
+            - DO NOT remove any unrelated comments, even if they are empty.
+            - Apply fix directly using MCP tools only
+
+            STEP 4 - REPORT SUCCESS:
+            Use mcp__github__add_issue_comment to post:
+            - Branch name created: cve-fix-issue-${{ env.ISSUE_NUMBER }}-${{ github.run_number }}
+            - Fix applied summary
+            - Ready for PR message
+
+            EXECUTE these 4 steps. Parse the triage dynamically - do not hardcode fixes.

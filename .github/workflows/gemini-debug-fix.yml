@@ -1,0 +1,103 @@
+name: '🧪 Debug Create Fix'
+
+on:
+  issue_comment:
+    types: [created]
+
+concurrency:
+  group: '${{ github.workflow }}-${{ github.event.issue.number }}'
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: 'bash'
+
+jobs:
+  debug-fix:
+    runs-on: 'ubuntu-latest'
+    if: |
+      github.event.issue.state == 'open' &&
+      contains(github.event.comment.body, '@gemini-cli debug-fix')
+    permissions:
+      contents: 'write'
+      id-token: 'write'
+      issues: 'write'
+      pull-requests: 'write'
+    steps:
+      - name: 'Mint identity token'
+        id: 'mint_identity_token'
+        if: |-
+          ${{ vars.APP_ID }}
+        uses: 'actions/create-github-app-token@a8d616148505b5069dccd32f177bb87d7f39123b' # ratchet:actions/create-github-app-token@v2
+        with:
+          app-id: '${{ vars.APP_ID }}'
+          private-key: '${{ secrets.APP_PRIVATE_KEY }}'
+          permission-contents: 'write'
+          permission-issues: 'write'
+          permission-pull-requests: 'write'
+
+      - name: 'Run Gemini CLI - Debug Step by Step'
+        id: 'run_gemini_debug'
+        timeout-minutes: 3
+        uses: 'google-github-actions/run-gemini-cli@v0' # ratchet:exclude
+        env:
+          TITLE: '${{ github.event.issue.title }}'
+          DESCRIPTION: '${{ github.event.issue.body }}'
+          EVENT_NAME: '${{ github.event_name }}'
+          GITHUB_TOKEN: '${{ steps.mint_identity_token.outputs.token || secrets.REPO_TOKEN || github.token }}'
+          ISSUE_NUMBER: '${{ github.event.issue.number }}'
+          REPOSITORY: '${{ github.repository }}'
+        with:
+          gemini_api_key: '${{ secrets.GEMINI_API_KEY }}'
+          gcp_workload_identity_provider: '${{ vars.GCP_WIF_PROVIDER }}'
+          gcp_project_id: '${{ vars.GOOGLE_CLOUD_PROJECT }}'
+          gcp_location: '${{ vars.GOOGLE_CLOUD_LOCATION }}'
+          gcp_service_account: '${{ vars.SERVICE_ACCOUNT_EMAIL }}'
+          use_vertex_ai: '${{ vars.GOOGLE_GENAI_USE_VERTEXAI }}'
+          google_api_key: '${{ secrets.GOOGLE_API_KEY }}'
+          use_gemini_code_assist: '${{ vars.GOOGLE_GENAI_USE_GCA }}'
+          gemini_debug: true
+          gemini_model: '${{ vars.GEMINI_MODEL }}'
+          settings: |-
+            {
+              "maxSessionTurns": 10,
+              "telemetry": {
+                "enabled": ${{ vars.GOOGLE_CLOUD_PROJECT != '' }},
+                "target": "gcp"
+              },
+              "mcpServers": {
+                "github": {
+                  "command": "docker",
+                  "args": [
+                    "run",
+                    "-i",
+                    "--rm",
+                    "-e",
+                    "GITHUB_PERSONAL_ACCESS_TOKEN",
+                    "ghcr.io/github/github-mcp-server"
+                  ],
+                  "includeTools": [
+                    "add_issue_comment"
+                  ],
+                  "env": {
+                    "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
+                  }
+                }
+              }
+            }
+          prompt: |-
+            You are debugging a CVE fix workflow for repository ${{ env.REPOSITORY }}.
+
+            DEBUG TASK: Test basic MCP functionality for issue #${{ env.ISSUE_NUMBER }}.
+
+            SIMPLE TEST: Use mcp__github__add_issue_comment to post a debug comment with:
+            - "🧪 Debug Test Results"
+            - "MCP GitHub tools are working correctly"
+            - "Next step: implement actual fix logic"
+
+            Use these exact parameters:
+            - owner: "abraham2512"
+            - repo: "cnf-features-deploy"
+            - issue_number: ${{ env.ISSUE_NUMBER }}
+
+            Post this test comment now.

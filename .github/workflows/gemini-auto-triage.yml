@@ -1,0 +1,121 @@
+name: '🔍 Gemini Auto Triage'
+
+on:
+  issue_comment:
+    types: [created]
+
+concurrency:
+  group: '${{ github.workflow }}-${{ github.event.issue.number }}'
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: 'bash'
+
+jobs:
+  auto-triage:
+    runs-on: 'ubuntu-latest'
+    if: |
+      github.event.issue.state == 'open' &&
+      contains(github.event.comment.body, '@gemini-cli auto-triage')
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+      issues: 'write'
+      pull-requests: 'write'
+    steps:
+      - name: 'Mint identity token'
+        id: 'mint_identity_token'
+        if: |-
+          ${{ vars.APP_ID }}
+        uses: 'actions/create-github-app-token@a8d616148505b5069dccd32f177bb87d7f39123b' # ratchet:actions/create-github-app-token@v2
+        with:
+          app-id: '${{ vars.APP_ID }}'
+          private-key: '${{ secrets.APP_PRIVATE_KEY }}'
+          permission-contents: 'read'
+          permission-issues: 'write'
+          permission-pull-requests: 'write'
+
+      - name: 'Run Gemini CLI - Auto Triage'
+        id: 'run_gemini_triage'
+        uses: 'google-github-actions/run-gemini-cli@v0' # ratchet:exclude
+        env:
+          TITLE: '${{ github.event.issue.title }}'
+          DESCRIPTION: '${{ github.event.issue.body }}'
+          EVENT_NAME: '${{ github.event_name }}'
+          GITHUB_TOKEN: '${{ steps.mint_identity_token.outputs.token || secrets.GITHUB_TOKEN || github.token }}'
+          ISSUE_NUMBER: '${{ github.event.issue.number }}'
+          REPOSITORY: '${{ github.repository }}'
+          COMMAND_TYPE: 'auto-triage'
+        with:
+          gemini_api_key: '${{ secrets.GEMINI_API_KEY }}'
+          gcp_workload_identity_provider: '${{ vars.GCP_WIF_PROVIDER }}'
+          gcp_project_id: '${{ vars.GOOGLE_CLOUD_PROJECT }}'
+          gcp_location: '${{ vars.GOOGLE_CLOUD_LOCATION }}'
+          gcp_service_account: '${{ vars.SERVICE_ACCOUNT_EMAIL }}'
+          use_vertex_ai: '${{ vars.GOOGLE_GENAI_USE_VERTEXAI }}'
+          google_api_key: '${{ secrets.GOOGLE_API_KEY }}'
+          use_gemini_code_assist: '${{ vars.GOOGLE_GENAI_USE_GCA }}'
+          gemini_debug: true
+          gemini_model: '${{ vars.GEMINI_MODEL }}'
+          settings: |-
+            {
+              "maxSessionTurns": 50,
+              "telemetry": {
+                "enabled": ${{ vars.GOOGLE_CLOUD_PROJECT != '' }},
+                "target": "gcp"
+              },
+              "mcpServers": {
+                "github": {
+                  "command": "docker",
+                  "args": [
+                    "run",
+                    "-i",
+                    "--rm",
+                    "-e",
+                    "GITHUB_PERSONAL_ACCESS_TOKEN",
+                    "ghcr.io/github/github-mcp-server"
+                  ],
+                  "includeTools": [
+                    "add_issue_comment",
+                    "get_issue",
+                    "get_issue_comments",
+                    "list_issues",
+                    "search_issues",
+                    "get_file_contents",
+                    "search_code",
+                    "list_commits",
+                    "get_commit"
+                  ],
+                  "env": {
+                    "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
+                  }
+                }
+              },
+              "coreTools": [
+                "run_shell_command(find)",
+                "run_shell_command(grep)",
+                "run_shell_command(cat)",
+                "run_shell_command(head)",
+                "run_shell_command(tail)"
+              ]
+            }
+          prompt: |-
+            You are a security engineer analyzing CVE ${{ env.TITLE }} for repository ${{ env.REPOSITORY }}.
+
+            Repository context:
+            - Contains cnf-tests and ztp-site-generate containers (ztp-site-generate = resource-generator)
+            - Both containers share the same go.mod file
+
+            CVE Information:
+            ${{ env.DESCRIPTION }}
+
+            TASK: Use mcp__github__add_issue_comment to post your CVE analysis on issue #${{ env.ISSUE_NUMBER }}.
+
+            Your analysis must include:
+            1. **CVE Summary** - What is the vulnerability?
+            2. **Root Cause Analysis** - Why does this vulnerability exist?
+            3. **CVE Database Lookup** - Check national CVE database for official fixes/workarounds
+            4. **Proposed Fix** - Specific changes needed for Dockerfile/container configuration
+
+            Format as markdown with clear sections. Post the comment now.
