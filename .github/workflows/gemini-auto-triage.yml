@@ -36,16 +36,8 @@ jobs:
           permission-issues: 'write'
           permission-pull-requests: 'write'
 
-      - name: 'Determine command type'
-        id: 'command_type'
-        run: |
-          if echo "${{ github.event.comment.body }}" | grep -q "@gemini-cli auto-triage"; then
-            echo "command=auto-triage" >> $GITHUB_OUTPUT
-          fi
-
       - name: 'Run Gemini CLI - Auto Triage'
         id: 'run_gemini_triage'
-        if: steps.command_type.outputs.command == 'auto-triage'
         uses: 'google-github-actions/run-gemini-cli@v0' # ratchet:exclude
         env:
           TITLE: '${{ github.event.issue.title }}'
