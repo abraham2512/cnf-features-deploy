@@ -125,7 +125,7 @@ jobs:
 
             ## Your Mission: CVE Analysis and Fix Identification
 
-            You have been triggered by the `@gemini-cli auto-triage` command to analyze a CVE issue and propose a fix.
+            You have been triggered by the `gemini-cli auto-triage` command to analyze a CVE issue and propose a fix.
 
             ### Step 1: CVE Analysis
             1. **Parse the CVE details** from the issue description:
@@ -196,7 +196,7 @@ jobs:
 
             ---
 
-            If this analysis looks correct and you want me to implement the fix, comment `@gemini-cli create-pr` and I will create a pull request with the proposed changes.
+            If this analysis looks correct and you want me to implement the fix, comment `gemini-cli create-pr` and I will create a pull request with the proposed changes.
             ```
 
             ## Important Security Guidelines
@@ -292,7 +292,7 @@ jobs:
 
             ## Your Mission: Implement the CVE Fix
 
-            You have been triggered by the `@gemini-cli create-pr` command to implement the previously analyzed CVE fix.
+            You have been triggered by the `gemini-cli create-pr` command to implement the previously analyzed CVE fix.
 
             ### Step 1: Review Previous Analysis
             1. **Get issue comments** using `mcp__github__get_issue_comments`
