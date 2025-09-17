@@ -112,105 +112,20 @@ jobs:
               ]
             }
           prompt: |-
-            ## CVE Auto-Triage Assistant
+            You are analyzing CVE-2025-7195 for the repository ${REPOSITORY}.
 
-            You are a security-focused AI assistant specialized in analyzing CVE (Common Vulnerabilities and Exposures) reports and identifying potential fixes in codebases.
+            CVE Details:
+            - Title: ${TITLE}
+            - Description: ${DESCRIPTION}
 
-            ## Current Context
-            - **Issue Title**: ${TITLE}
-            - **Issue Description**: ${DESCRIPTION}
-            - **Repository**: ${REPOSITORY}
-            - **Issue Number**: ${ISSUE_NUMBER}
-            - **Command**: ${COMMAND_TYPE}
+            Please use the mcp__github__add_issue_comment tool to post a comment on issue #${ISSUE_NUMBER} with your analysis of this CVE.
 
-            ## Your Mission: CVE Analysis and Fix Identification
+            Your comment should include:
+            1. CVE Summary
+            2. Analysis of the /etc/passwd permissions issue
+            3. Proposed fix for the Dockerfile or container configuration
 
-            You have been triggered by the `gemini-cli auto-triage` command to analyze a CVE issue and propose a fix.
-
-            ### Step 1: CVE Analysis
-            1. **Parse the CVE details** from the issue description:
-               - CVE ID (if present)
-               - Affected components/libraries
-               - Vulnerability type (e.g., injection, XSS, buffer overflow, etc.)
-               - Severity level
-               - Attack vectors described
-
-            2. **Identify the root cause**:
-               - What specific code patterns or dependencies are vulnerable?
-               - Which files or modules are likely affected?
-
-            ### Step 2: Codebase Investigation
-            1. **Search for vulnerable patterns** using your tools:
-               - Use `mcp__github__search_code` to find relevant files
-               - Use `mcp__github__get_file_contents` to examine specific files
-               - Look for the vulnerable code patterns mentioned in the CVE
-
-            2. **Analyze dependencies**:
-               - Check package.json, requirements.txt, Cargo.toml, go.mod, etc.
-               - Identify if vulnerable versions of dependencies are in use
-
-            ### Step 3: Fix Strategy Development
-            1. **Determine the fix approach**:
-               - Dependency update (version bump)
-               - Code pattern change (input validation, sanitization, etc.)
-               - Configuration change
-               - Architecture modification
-
-            2. **Assess complexity**:
-               - Simple: Version bump, minor code change
-               - Complex: Requires significant refactoring or multiple file changes
-
-            ### Step 4: Present Your Analysis
-            Post a detailed comment using `mcp__github__add_issue_comment` with the following structure:
-
-            ```markdown
-            ## 🔍 CVE Auto-Triage Analysis
-
-            ### CVE Summary
-            - **CVE ID**: [ID if found]
-            - **Vulnerability Type**: [Type]
-            - **Severity**: [Level]
-            - **Affected Component**: [Component/Library]
-
-            ### Codebase Analysis
-            - **Files Examined**: [List of key files checked]
-            - **Vulnerable Patterns Found**: [Yes/No and details]
-            - **Dependencies Checked**: [Relevant package files]
-
-            ### Proposed Fix
-            **Fix Type**: [Dependency Update/Code Change/Configuration/etc.]
-            **Complexity**: [Simple/Complex]
-            **Target Branch**: master
-
-            **Detailed Fix Plan**:
-            [Specific steps needed to address the vulnerability]
-
-            **Files to Modify**:
-            - `file1.js`: [Description of changes needed]
-            - `package.json`: [Version updates needed]
-
-            ### Risk Assessment
-            - **Breaking Changes**: [Yes/No and explanation]
-            - **Testing Required**: [What needs to be tested]
-            - **Rollback Plan**: [How to revert if issues arise]
-
-            ---
-
-            If this analysis looks correct and you want me to implement the fix, comment `gemini-cli create-pr` and I will create a pull request with the proposed changes.
-            ```
-
-            ## Important Security Guidelines
-            1. **Be Conservative**: Only propose fixes you are confident about
-            2. **Prefer Updates**: When possible, suggest dependency updates over code rewrites
-            3. **Validate Thoroughly**: Use multiple search strategies to ensure you've found all instances
-            4. **Document Assumptions**: Be clear about what you're assuming vs. what you've verified
-
-            ## Error Handling
-            - If you cannot identify the vulnerability in the codebase, explain what you searched for and why it might not be present
-            - If the CVE description is unclear, ask for clarification
-            - If the fix is too complex for automated implementation, explain why and suggest manual review
-
-            Begin your analysis now.
+            Start your analysis now.
 
       - name: 'Run Gemini CLI - Create PR'
         id: 'run_gemini_create_pr'
