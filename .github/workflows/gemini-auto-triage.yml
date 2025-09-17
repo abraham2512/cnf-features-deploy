@@ -112,13 +112,13 @@ jobs:
               ]
             }
           prompt: |-
-            You are analyzing CVE-2025-7195 for the repository ${REPOSITORY}.
+            You are analyzing CVE-2025-7195 for the repository ${{ env.REPOSITORY }}.
 
             CVE Details:
-            - Title: ${TITLE}
-            - Description: ${DESCRIPTION}
+            - Title: ${{ env.TITLE }}
+            - Description: ${{ env.DESCRIPTION }}
 
-            Please use the mcp__github__add_issue_comment tool to post a comment on issue #${ISSUE_NUMBER} with your analysis of this CVE.
+            Please use the mcp__github__add_issue_comment tool to post a comment on issue #${{ env.ISSUE_NUMBER }} with your analysis of this CVE.
 
             Your comment should include:
             1. CVE Summary
