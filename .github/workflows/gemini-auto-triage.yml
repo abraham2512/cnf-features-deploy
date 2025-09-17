@@ -17,8 +17,7 @@ jobs:
     runs-on: 'ubuntu-latest'
     if: |
       github.event.issue.state == 'open' &&
-      (contains(github.event.comment.body, '@gemini-cli auto-triage') ||
-       contains(github.event.comment.body, '@gemini-cli create-pr'))
+      contains(github.event.comment.body, '@gemini-cli auto-triage')
     permissions:
       contents: 'read'
       id-token: 'write'
@@ -42,8 +41,6 @@ jobs:
         run: |
           if echo "${{ github.event.comment.body }}" | grep -q "@gemini-cli auto-triage"; then
             echo "command=auto-triage" >> $GITHUB_OUTPUT
-          elif echo "${{ github.event.comment.body }}" | grep -q "@gemini-cli create-pr"; then
-            echo "command=create-pr" >> $GITHUB_OUTPUT
           fi
 
       - name: 'Run Gemini CLI - Auto Triage'
@@ -112,7 +109,7 @@ jobs:
               ]
             }
           prompt: |-
-            You are analyzing CVE-2025-7195 for the repository ${{ env.REPOSITORY }}.
+            You are analyzing a CVE for the repository ${{ env.REPOSITORY }}.
 
             CVE Details:
             - Title: ${{ env.TITLE }}
@@ -126,151 +123,3 @@ jobs:
             3. Proposed fix for the Dockerfile or container configuration
 
             Start your analysis now.
-
-      - name: 'Run Gemini CLI - Create PR'
-        id: 'run_gemini_create_pr'
-        if: steps.command_type.outputs.command == 'create-pr'
-        uses: 'google-github-actions/run-gemini-cli@v0' # ratchet:exclude
-        env:
-          TITLE: '${{ github.event.issue.title }}'
-          DESCRIPTION: '${{ github.event.issue.body }}'
-          EVENT_NAME: '${{ github.event_name }}'
-          GITHUB_TOKEN: '${{ steps.mint_identity_token.outputs.token || secrets.GITHUB_TOKEN || github.token }}'
-          ISSUE_NUMBER: '${{ github.event.issue.number }}'
-          REPOSITORY: '${{ github.repository }}'
-          COMMAND_TYPE: 'create-pr'
-        with:
-          gemini_api_key: '${{ secrets.GEMINI_API_KEY }}'
-          gcp_workload_identity_provider: '${{ vars.GCP_WIF_PROVIDER }}'
-          gcp_project_id: '${{ vars.GOOGLE_CLOUD_PROJECT }}'
-          gcp_location: '${{ vars.GOOGLE_CLOUD_LOCATION }}'
-          gcp_service_account: '${{ vars.SERVICE_ACCOUNT_EMAIL }}'
-          use_vertex_ai: '${{ vars.GOOGLE_GENAI_USE_VERTEXAI }}'
-          google_api_key: '${{ secrets.GOOGLE_API_KEY }}'
-          use_gemini_code_assist: '${{ vars.GOOGLE_GENAI_USE_GCA }}'
-          gemini_debug: '${{ fromJSON(vars.DEBUG || vars.ACTIONS_STEP_DEBUG || false) }}'
-          gemini_model: '${{ vars.GEMINI_MODEL }}'
-          settings: |-
-            {
-              "maxSessionTurns": 75,
-              "telemetry": {
-                "enabled": ${{ vars.GOOGLE_CLOUD_PROJECT != '' }},
-                "target": "gcp"
-              },
-              "mcpServers": {
-                "github": {
-                  "command": "docker",
-                  "args": [
-                    "run",
-                    "-i",
-                    "--rm",
-                    "-e",
-                    "GITHUB_PERSONAL_ACCESS_TOKEN",
-                    "ghcr.io/github/github-mcp-server"
-                  ],
-                  "includeTools": [
-                    "add_issue_comment",
-                    "get_issue",
-                    "get_issue_comments",
-                    "create_branch",
-                    "create_or_update_file",
-                    "create_pull_request",
-                    "get_file_contents",
-                    "search_code",
-                    "list_commits",
-                    "get_commit"
-                  ],
-                  "env": {
-                    "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
-                  }
-                }
-              },
-              "coreTools": [
-                "run_shell_command(find)",
-                "run_shell_command(grep)",
-                "run_shell_command(cat)",
-                "run_shell_command(head)",
-                "run_shell_command(tail)"
-              ]
-            }
-          prompt: |-
-            ## CVE Fix Implementation Assistant
-
-            You are implementing the CVE fix that was previously analyzed and approved via the `@gemini-cli auto-triage` command.
-
-            ## Current Context
-            - **Issue Title**: ${TITLE}
-            - **Issue Description**: ${DESCRIPTION}
-            - **Repository**: ${REPOSITORY}
-            - **Issue Number**: ${ISSUE_NUMBER}
-            - **Command**: ${COMMAND_TYPE}
-
-            ## Your Mission: Implement the CVE Fix
-
-            You have been triggered by the `gemini-cli create-pr` command to implement the previously analyzed CVE fix.
-
-            ### Step 1: Review Previous Analysis
-            1. **Get issue comments** using `mcp__github__get_issue_comments`
-            2. **Find your previous analysis** (the comment with "🔍 CVE Auto-Triage Analysis")
-            3. **Extract the fix plan** from your previous analysis
-
-            ### Step 2: Implement the Fix
-            1. **Create a new branch** using `mcp__github__create_branch`:
-               - Branch name format: `fix/cve-[issue-number]-[brief-description]`
-               - Base branch: `master`
-
-            2. **Implement the changes** using `mcp__github__create_or_update_file`:
-               - Follow the exact fix plan from your previous analysis
-               - Make minimal, targeted changes
-               - Use conventional commit message format: `fix: address CVE in [component] (closes #${ISSUE_NUMBER})`
-
-            ### Step 3: Create Pull Request
-            1. **Create the PR** using `mcp__github__create_pull_request`:
-               - Title: `fix: Address CVE-[ID] - [Brief Description]`
-               - Target branch: `master`
-               - Include comprehensive description with:
-                 - CVE details
-                 - Changes made
-                 - Testing recommendations
-                 - Security impact assessment
-
-            ### Step 4: Update Issue
-            1. **Add final comment** using `mcp__github__add_issue_comment`:
-
-            ```markdown
-            ## ✅ CVE Fix Implemented
-
-            I have successfully implemented the CVE fix as analyzed in my previous comment.
-
-            ### Changes Made
-            - **Branch Created**: `fix/cve-[issue-number]-[description]`
-            - **Files Modified**: [List files with brief description of changes]
-            - **Commit Message**: [Conventional commit format used]
-
-            ### Pull Request
-            **PR Link**: [Link to created PR]
-            **Target Branch**: master
-            **Review Required**: Yes - Please review the security fix before merging
-
-            ### Next Steps
-            1. Review the pull request for correctness
-            2. Test the fix in a staging environment
-            3. Verify the CVE is properly addressed
-            4. Merge when satisfied with the security fix
-
-            The automated CVE fix process is now complete.
-            ```
-
-            ## Implementation Guidelines
-            1. **Security First**: Ensure the fix properly addresses the vulnerability
-            2. **Minimal Changes**: Make only the changes necessary to fix the CVE
-            3. **Conventional Commits**: Use proper commit message format
-            4. **Clear Documentation**: Provide comprehensive PR description
-            5. **Test Recommendations**: Suggest appropriate testing for the fix
-
-            ## Error Handling
-            - If you cannot find your previous analysis, explain this and ask for clarification
-            - If the fix plan is unclear, request more specific guidance
-            - If file operations fail, provide clear error messages and suggest manual intervention
-
-            Begin implementing the CVE fix now.
