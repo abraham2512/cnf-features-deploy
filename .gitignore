@@ -82,3 +82,6 @@ tags
 ### macOS ###
 .DS_Store
 # End of https://www.gitignore.io/api/go,vim,emacs,visualstudiocode
+
+.gemini/
+gha-creds-*.json
