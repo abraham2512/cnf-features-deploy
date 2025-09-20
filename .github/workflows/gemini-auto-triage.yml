@@ -103,6 +103,10 @@ jobs:
           prompt: |-
             You are analyzing a CVE for the repository ${{ env.REPOSITORY }}.
 
+            Some repository specific details:
+            - There are two containers built here, cnf-tests and ztp-site-generate (same as resource-generator)
+            - Both share the same go.mod file.
+
             CVE Details:
             - Title: ${{ env.TITLE }}
             - Description: ${{ env.DESCRIPTION }}
@@ -111,7 +115,8 @@ jobs:
 
             Your comment should include:
             1. CVE Summary
-            2. Analysis of the /etc/passwd permissions issue
-            3. Proposed fix for the Dockerfile or container configuration
+            2. Analysis of the root cause and the fix. 
+            3. Lookup the CVE in the national CVE database to see if there is a fix or a workaround.
+            3. Propose the fix for the Dockerfile, container configuration, or any other relevant files in the repository.
 
             Start your analysis now.
