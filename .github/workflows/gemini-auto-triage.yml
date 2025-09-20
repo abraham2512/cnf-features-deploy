@@ -56,7 +56,7 @@ jobs:
           use_vertex_ai: '${{ vars.GOOGLE_GENAI_USE_VERTEXAI }}'
           google_api_key: '${{ secrets.GOOGLE_API_KEY }}'
           use_gemini_code_assist: '${{ vars.GOOGLE_GENAI_USE_GCA }}'
-          gemini_debug: '${{ fromJSON(vars.DEBUG || vars.ACTIONS_STEP_DEBUG || false) }}'
+          gemini_debug: true
           gemini_model: '${{ vars.GEMINI_MODEL }}'
           settings: |-
             {
@@ -101,22 +101,21 @@ jobs:
               ]
             }
           prompt: |-
-            You are analyzing a CVE for the repository ${{ env.REPOSITORY }}.
+            You are a security engineer analyzing CVE ${{ env.TITLE }} for repository ${{ env.REPOSITORY }}.
 
-            Some repository specific details:
-            - There are two containers built here, cnf-tests and ztp-site-generate (same as resource-generator)
-            - Both share the same go.mod file.
+            Repository context:
+            - Contains cnf-tests and ztp-site-generate containers (ztp-site-generate = resource-generator)
+            - Both containers share the same go.mod file
 
-            CVE Details:
-            - Title: ${{ env.TITLE }}
-            - Description: ${{ env.DESCRIPTION }}
+            CVE Information:
+            ${{ env.DESCRIPTION }}
 
-            Please use the mcp__github__add_issue_comment tool to post a comment on issue #${{ env.ISSUE_NUMBER }} with your analysis of this CVE.
+            TASK: Use mcp__github__add_issue_comment to post your CVE analysis on issue #${{ env.ISSUE_NUMBER }}.
 
-            Your comment should include:
-            1. CVE Summary
-            2. Analysis of the root cause and the fix. 
-            3. Lookup the CVE in the national CVE database to see if there is a fix or a workaround.
-            3. Propose the fix for the Dockerfile, container configuration, or any other relevant files in the repository.
+            Your analysis must include:
+            1. **CVE Summary** - What is the vulnerability?
+            2. **Root Cause Analysis** - Why does this vulnerability exist?
+            3. **CVE Database Lookup** - Check national CVE database for official fixes/workarounds
+            4. **Proposed Fix** - Specific changes needed for Dockerfile/container configuration
 
-            Start your analysis now.
+            Format as markdown with clear sections. Post the comment now.
