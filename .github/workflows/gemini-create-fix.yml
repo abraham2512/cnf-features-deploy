@@ -105,7 +105,8 @@ jobs:
             Repository context:
             - Contains cnf-tests and ztp-site-generate containers
             - ztp-site-generate is the same as resource-generator (different names, same container)
-            - Look for files in ztp/resource-generator/ directory
+            - The ztp-site-generate container is built from ztp/resource-generator/Containerfile (not Dockerfile!)
+            - Look for Containerfile in ztp/resource-generator/ directory
 
             TASK: Create a fix branch for CVE issue #${{ env.ISSUE_NUMBER }}.
 
