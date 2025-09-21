@@ -112,9 +112,7 @@ jobs:
             STEP 3 - APPLY SECURITY FIX:
             Based on the triage analysis, use ONLY mcp__github__create_or_update_file to:
             - For ztp-site-generate container: modify "ztp/resource-generator/Containerfile"
-            - For other containers: identify the correct Dockerfile/Containerfile path
-            - Add the security fix command before USER instructions (typically around line 67)
-            - Common security fixes: RUN chmod 644 /etc/passwd, package updates, etc.
+            - Apply the fix in this file and make minimal changes. Ensure the formatting such as new line is exactly the same.
             - Use a descriptive commit message mentioning the CVE
             - DO NOT use shell commands or try to read current file content
             - Apply fix directly using MCP tools only
