@@ -36,6 +36,11 @@ jobs:
           permission-issues: 'write'
           permission-pull-requests: 'write'
 
+      - name: 'Checkout repository'
+        uses: 'actions/checkout@v4'
+        with:
+          token: '${{ steps.mint_identity_token.outputs.token || secrets.GITHUB_TOKEN || github.token }}'
+
       - name: 'Run Gemini CLI - Create Fix'
         id: 'run_gemini_create_fix'
         uses: 'google-github-actions/run-gemini-cli@v0' # ratchet:exclude
@@ -64,33 +69,6 @@ jobs:
                 "enabled": ${{ vars.GOOGLE_CLOUD_PROJECT != '' }},
                 "target": "gcp"
               },
-              "mcpServers": {
-                "github": {
-                  "command": "docker",
-                  "args": [
-                    "run",
-                    "-i",
-                    "--rm",
-                    "-e",
-                    "GITHUB_PERSONAL_ACCESS_TOKEN",
-                    "ghcr.io/github/github-mcp-server"
-                  ],
-                  "includeTools": [
-                    "add_issue_comment",
-                    "get_issue",
-                    "get_issue_comments",
-                    "create_branch",
-                    "create_or_update_file",
-                    "get_file_contents",
-                    "search_code",
-                    "list_commits",
-                    "get_commit"
-                  ],
-                  "env": {
-                    "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
-                  }
-                }
-              },
               "coreTools": [
                 "run_shell_command(find)",
                 "run_shell_command(grep)",
@@ -100,4 +78,16 @@ jobs:
               ]
             }
           prompt: |-
-            Test MCP tools: Use mcp__github__get_issue to get issue #${{ env.ISSUE_NUMBER }} from abraham2512/cnf-features-deploy. Then post a comment saying "MCP tools working!"
+            TASK: Add security fix to ztp/resource-generator/Containerfile for issue #${{ env.ISSUE_NUMBER }}.
+
+            REPOSITORY: ${{ env.REPOSITORY }} (owner: abraham2512, repo: cnf-features-deploy)
+
+            Steps:
+            1. Use run_shell_command to find the Containerfile: find . -name "Containerfile" -type f
+            2. Use run_shell_command to read it: cat ztp/resource-generator/Containerfile
+            3. Use run_shell_command to create a branch: git checkout -b cve-fix-${{ env.ISSUE_NUMBER }}
+            4. Use run_shell_command to add the fix: echo 'RUN chmod 644 /etc/passwd' >> ztp/resource-generator/Containerfile
+            5. Use run_shell_command to commit: git add . && git commit -m "fix: add CVE-2025-7195 security fix"
+            6. Use run_shell_command to push: git push origin cve-fix-${{ env.ISSUE_NUMBER }}
+
+            Execute these steps using the available shell commands.
