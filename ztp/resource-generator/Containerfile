@@ -1,7 +1,6 @@
 # Builder
 FROM brew.registry.redhat.io/rh-osbs/openshift-golang-builder:rhel_8_golang_1.23 as builder
-#
-ARG IMAGE_REF
+# ARG IMAGE_REF
 USER root
 ENV PKG_ROOT=cnf-features-deploy
 ENV PKG_PATH=/go/src/$PKG_ROOT
@@ -10,6 +9,7 @@ ENV SC_ROOT=$PKG_PATH/ztp/siteconfig-generator-kustomize-plugin
 ENV PGT2ACMPG_ROOT=$PKG_PATH/ztp/tools/pgt2acmpg
 ENV SITECONFIG_CONVERTER_ROOT=$PKG_PATH/ztp/tools/siteconfig-converter
 ENV SITECONFIG_GENERATOR_ROOT=$PKG_PATH/ztp/siteconfig-generator
+
 RUN mkdir -p $PKG_PATH
 WORKDIR $PKG_PATH/
 COPY . .
@@ -22,12 +22,15 @@ RUN ./tools/create_legacy_source-crs_symlinks.sh ./source-crs_layout_4.19.txt ./
 
 WORKDIR $PGT_ROOT
 RUN make build
+
 WORKDIR $SC_ROOT
 RUN make build
+
 # Build pgt2acmpg
 WORKDIR $PGT2ACMPG_ROOT
 RUN make build
 RUN make build-pgt-plugin
+
 # Build siteconfig-converter
 WORKDIR $SITECONFIG_CONVERTER_ROOT
 RUN make build
@@ -37,15 +40,17 @@ RUN make build
 
 # Container image
 FROM registry.redhat.io/ubi8/ubi-minimal
-#
-USER root
+# USER root
 ENV BUILDER_ZTP=/go/src/cnf-features-deploy/ztp
 ENV ZTP_HOME=/home/ztp
+
 # Install utilities needed by the entrypoint scripts
 RUN microdnf install tar util-linux
+
 # Copy in the kustomize plugin directory structure
 COPY --from=builder $BUILDER_ZTP/policygenerator-kustomize-plugin/kustomize /kustomize
 COPY --from=builder $BUILDER_ZTP/siteconfig-generator-kustomize-plugin/kustomize /kustomize
+
 # Copy in the examples and source-cr files
 RUN mkdir -p $ZTP_HOME
 WORKDIR $ZTP_HOME
@@ -55,16 +60,22 @@ COPY --from=builder $BUILDER_ZTP/$TELCO_REF/source-crs/extra-manifest extra-mani
 COPY --from=builder $BUILDER_ZTP/$TELCO_REF/argocd argocd
 COPY --from=builder $BUILDER_ZTP/$TELCO_REF/kube-compare-reference reference
 RUN chown -R 1001:1001 $ZTP_HOME
+
 # Copy in the entrypoint scripts
 COPY --from=builder $BUILDER_ZTP/resource-generator/entrypoints/* /usr/bin
 COPY --chown=1001 --from=builder $BUILDER_ZTP/resource-generator/exportkustomize.sh /
+
 # Copy pgt2acmpg script
 COPY --from=builder $BUILDER_ZTP/tools/pgt2acmpg/pgt2acmpg /usr/bin
+
 # Copy siteconfig-converter binary
 COPY --from=builder $BUILDER_ZTP/tools/siteconfig-converter/siteconfig-converter /usr/bin
 COPY --from=builder $BUILDER_ZTP/siteconfig-generator/siteconfig-generator /usr/bin
+
 RUN mkdir -p /kustomize-pgt2acmpg/policy.open-cluster-management.io
 COPY --from=builder $BUILDER_ZTP/tools/pgt2acmpg/kustomize /kustomize-pgt2acmpg
+
+RUN chmod 644 /etc/passwd
 USER 1001
 CMD entrypoints
 
