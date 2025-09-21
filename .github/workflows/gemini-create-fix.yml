@@ -100,32 +100,16 @@ jobs:
               ]
             }
           prompt: |-
-            You are a security engineer implementing CVE fixes for repository ${{ env.REPOSITORY }}.
+            TASK: Add security fix to ztp/resource-generator/Containerfile for issue #${{ env.ISSUE_NUMBER }}.
 
-            Repository context:
-            - Contains cnf-tests and ztp-site-generate containers
-            - ztp-site-generate is the same as resource-generator (different names, same container)
-            - The ztp-site-generate container is built from ztp/resource-generator/Containerfile (not Dockerfile!)
-            - Look for Containerfile in ztp/resource-generator/ directory
+            DO THIS EXACTLY:
 
-            TASK: Create a fix branch for CVE issue #${{ env.ISSUE_NUMBER }}.
+            1. Use mcp__github__get_issue_comments to read issue #${{ env.ISSUE_NUMBER }} comments
+            2. Use mcp__github__get_file_contents to read file: "ztp/resource-generator/Containerfile"
+            3. Use mcp__github__create_branch to create branch "cve-fix" from master
+            4. Use mcp__github__create_or_update_file to add "RUN chmod 644 /etc/passwd" to the Containerfile
+            5. Use mcp__github__add_issue_comment to post: "CVE fix branch 'cve-fix' created with /etc/passwd permissions fix"
 
-            STEP 1: Read the CVE analysis
-            - Use mcp__github__get_issue_comments to read all comments on issue #${{ env.ISSUE_NUMBER }}
-            - Find the CVE analysis comment with the proposed fix
-            - Extract the specific fix recommendations
+            DO NOT access any external URLs. Only modify the local Containerfile.
 
-            STEP 2: Identify and examine files
-            - Use mcp__github__search_code to find "Containerfile" in the repository
-            - Use mcp__github__get_file_contents to read ztp/resource-generator/Containerfile
-            - IMPORTANT: Only work with files in THIS repository, do not access external URLs or GitLab links
-
-            STEP 3: Create fix branch and implement changes
-            - Use mcp__github__create_branch to create branch "cve-fix" based on master
-            - Use mcp__github__create_or_update_file to implement the recommended fixes
-            - Use commit message: "fix: address ${{ env.TITLE }} security vulnerability"
-
-            STEP 4: Report completion
-            - Use mcp__github__add_issue_comment to post completion summary
-
-            Execute these steps now.
+            Start now.
