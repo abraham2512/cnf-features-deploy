@@ -110,10 +110,11 @@ jobs:
             Use mcp__github__create_branch with owner="abraham2512", repo="cnf-features-deploy", branch="cve-fix-issue-${{ env.ISSUE_NUMBER }}-${{ github.run_number }}", from_branch="master"
 
             STEP 3 - APPLY SECURITY FIX:
-            Based on the triage analysis, use ONLY mcp__github__create_or_update_file to:
+            Based on the triage analysis from STEP 1, use ONLY mcp__github__create_or_update_file to:
             - For ztp-site-generate container: modify "ztp/resource-generator/Containerfile"
-            - Apply the fix in this file and make minimal changes. Ensure the formatting such as new line is exactly the same.
-            - Use a descriptive commit message mentioning the CVE
+            - Extract the exact fix command from the "Proposed Fix" section of the triage analysis
+            - Apply that fix command at the location specified in the analysis (typically before USER instruction)
+            - Use a descriptive commit message mentioning the CVE and the specific change made
             - DO NOT use shell commands or try to read current file content
             - Apply fix directly using MCP tools only
 
