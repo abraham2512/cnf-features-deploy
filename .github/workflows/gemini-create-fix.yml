@@ -116,8 +116,9 @@ jobs:
             - Extract the specific fix recommendations
 
             STEP 2: Identify and examine files
-            - Use mcp__github__search_code to find relevant files mentioned in the analysis
-            - Use mcp__github__get_file_contents to examine files that need changes
+            - Use mcp__github__search_code to find "Containerfile" in the repository
+            - Use mcp__github__get_file_contents to read ztp/resource-generator/Containerfile
+            - IMPORTANT: Only work with files in THIS repository, do not access external URLs or GitLab links
 
             STEP 3: Create fix branch and implement changes
             - Use mcp__github__create_branch to create branch "cve-fix" based on master
