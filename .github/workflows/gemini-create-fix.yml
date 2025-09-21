@@ -1,0 +1,130 @@
+name: '🔧 Gemini Create Fix'
+
+on:
+  issue_comment:
+    types: [created]
+
+concurrency:
+  group: '${{ github.workflow }}-${{ github.event.issue.number }}'
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: 'bash'
+
+jobs:
+  create-fix:
+    runs-on: 'ubuntu-latest'
+    if: |
+      github.event.issue.state == 'open' &&
+      contains(github.event.comment.body, '@gemini-cli create-fix')
+    permissions:
+      contents: 'write'
+      id-token: 'write'
+      issues: 'write'
+      pull-requests: 'write'
+    steps:
+      - name: 'Mint identity token'
+        id: 'mint_identity_token'
+        if: |-
+          ${{ vars.APP_ID }}
+        uses: 'actions/create-github-app-token@a8d616148505b5069dccd32f177bb87d7f39123b' # ratchet:actions/create-github-app-token@v2
+        with:
+          app-id: '${{ vars.APP_ID }}'
+          private-key: '${{ secrets.APP_PRIVATE_KEY }}'
+          permission-contents: 'write'
+          permission-issues: 'write'
+          permission-pull-requests: 'write'
+
+      - name: 'Run Gemini CLI - Create Fix'
+        id: 'run_gemini_create_fix'
+        uses: 'google-github-actions/run-gemini-cli@v0' # ratchet:exclude
+        env:
+          TITLE: '${{ github.event.issue.title }}'
+          DESCRIPTION: '${{ github.event.issue.body }}'
+          EVENT_NAME: '${{ github.event_name }}'
+          GITHUB_TOKEN: '${{ steps.mint_identity_token.outputs.token || secrets.GITHUB_TOKEN || github.token }}'
+          ISSUE_NUMBER: '${{ github.event.issue.number }}'
+          REPOSITORY: '${{ github.repository }}'
+        with:
+          gemini_api_key: '${{ secrets.GEMINI_API_KEY }}'
+          gcp_workload_identity_provider: '${{ vars.GCP_WIF_PROVIDER }}'
+          gcp_project_id: '${{ vars.GOOGLE_CLOUD_PROJECT }}'
+          gcp_location: '${{ vars.GOOGLE_CLOUD_LOCATION }}'
+          gcp_service_account: '${{ vars.SERVICE_ACCOUNT_EMAIL }}'
+          use_vertex_ai: '${{ vars.GOOGLE_GENAI_USE_VERTEXAI }}'
+          google_api_key: '${{ secrets.GOOGLE_API_KEY }}'
+          use_gemini_code_assist: '${{ vars.GOOGLE_GENAI_USE_GCA }}'
+          gemini_debug: true
+          gemini_model: '${{ vars.GEMINI_MODEL }}'
+          settings: |-
+            {
+              "maxSessionTurns": 75,
+              "telemetry": {
+                "enabled": ${{ vars.GOOGLE_CLOUD_PROJECT != '' }},
+                "target": "gcp"
+              },
+              "mcpServers": {
+                "github": {
+                  "command": "docker",
+                  "args": [
+                    "run",
+                    "-i",
+                    "--rm",
+                    "-e",
+                    "GITHUB_PERSONAL_ACCESS_TOKEN",
+                    "ghcr.io/github/github-mcp-server"
+                  ],
+                  "includeTools": [
+                    "add_issue_comment",
+                    "get_issue",
+                    "get_issue_comments",
+                    "create_branch",
+                    "create_or_update_file",
+                    "get_file_contents",
+                    "search_code",
+                    "list_commits",
+                    "get_commit"
+                  ],
+                  "env": {
+                    "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
+                  }
+                }
+              },
+              "coreTools": [
+                "run_shell_command(find)",
+                "run_shell_command(grep)",
+                "run_shell_command(cat)",
+                "run_shell_command(head)",
+                "run_shell_command(tail)"
+              ]
+            }
+          prompt: |-
+            You are a security engineer implementing CVE fixes for repository ${{ env.REPOSITORY }}.
+
+            TASK: Create a fix branch for CVE issue #${{ env.ISSUE_NUMBER }}.
+
+            STEP 1: Read the CVE analysis
+            - Use mcp__github__get_issue_comments to read all comments on issue #${{ env.ISSUE_NUMBER }}
+            - Find the CVE analysis comment (contains sections like "CVE Summary", "Root Cause Analysis", "Proposed Fix")
+            - Extract the specific fix recommendations from that analysis
+
+            STEP 2: Identify files to modify
+            - Use mcp__github__search_code to find Dockerfile files and container configurations
+            - Look for files related to ztp-site-generate/resource-generator container
+            - Use mcp__github__get_file_contents to examine the current state of files that need changes
+
+            STEP 3: Create fix branch and implement changes
+            - Use mcp__github__create_branch to create a new branch named "cve-fix" based on master
+            - Use mcp__github__create_or_update_file to implement the exact fixes recommended in the analysis
+            - Make minimal, targeted changes focused only on the security issue
+            - Use a descriptive commit message: "fix: address ${{ env.TITLE }} security vulnerability"
+
+            STEP 4: Report completion
+            - Use mcp__github__add_issue_comment to post a completion comment with:
+              - Branch name created
+              - Files modified
+              - Summary of changes made
+              - Link to the branch for review
+
+            Execute these steps now. Start with reading the issue comments to understand the fix requirements.
