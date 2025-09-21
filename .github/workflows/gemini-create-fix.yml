@@ -38,7 +38,7 @@ jobs:
 
       - name: 'Run Gemini CLI - Create Fix'
         id: 'run_gemini_create_fix'
-        timeout-minutes: 5
+        timeout-minutes: 10
         uses: 'google-github-actions/run-gemini-cli@v0' # ratchet:exclude
         env:
           TITLE: '${{ github.event.issue.title }}'
@@ -47,6 +47,7 @@ jobs:
           GITHUB_TOKEN: '${{ steps.mint_identity_token.outputs.token || secrets.GITHUB_TOKEN || github.token }}'
           ISSUE_NUMBER: '${{ github.event.issue.number }}'
           REPOSITORY: '${{ github.repository }}'
+          COMMENT_BODY: '${{ github.event.comment.body }}'
         with:
           gemini_api_key: '${{ secrets.GEMINI_API_KEY }}'
           gcp_workload_identity_provider: '${{ vars.GCP_WIF_PROVIDER }}'
@@ -77,15 +78,11 @@ jobs:
                     "ghcr.io/github/github-mcp-server"
                   ],
                   "includeTools": [
-                    "add_issue_comment",
-                    "get_issue",
                     "get_issue_comments",
+                    "get_file_contents",
                     "create_branch",
                     "create_or_update_file",
-                    "get_file_contents",
-                    "search_code",
-                    "list_commits",
-                    "get_commit"
+                    "add_issue_comment"
                   ],
                   "env": {
                     "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
@@ -94,20 +91,36 @@ jobs:
               }
             }
           prompt: |-
-            You are a security engineer analyzing CVE fix implementation for repository ${{ env.REPOSITORY }}.
+            You are a security engineer implementing CVE fixes for repository ${{ env.REPOSITORY }}.
 
-            TASK: Analyze the CVE and provide implementation guidance for issue #${{ env.ISSUE_NUMBER }}.
+            TASK: Create a fix branch for issue #${{ env.ISSUE_NUMBER }} based on the auto-triage analysis.
 
-            STEP 1: Read the auto-triage analysis
-            Use mcp__github__get_issue_comments with owner "abraham2512" and repo "cnf-features-deploy" to read issue #${{ env.ISSUE_NUMBER }} comments and find the CVE analysis.
+            STEP 1: Read the triage analysis
+            Use mcp__github__get_issue_comments with owner "abraham2512" and repo "cnf-features-deploy" and issue_number ${{ env.ISSUE_NUMBER }} to get all comments. Find the most recent comment containing "CVE Analysis" or "Proposed Fix" that has the technical details.
 
-            STEP 2: Examine the current container file
-            Use mcp__github__get_file_contents with owner "abraham2512", repo "cnf-features-deploy", path "ztp/resource-generator/Containerfile" to examine the current configuration.
+            STEP 2: Extract the fix from the analysis
+            From the triage analysis, identify:
+            - The specific file to modify (e.g., Containerfile, Dockerfile)
+            - The exact change needed (e.g., "RUN chmod 644 /etc/passwd")
+            - The location in the file where the change should be applied
 
-            STEP 3: Post implementation guidance
-            Use mcp__github__add_issue_comment with owner "abraham2512", repo "cnf-features-deploy" to post:
-            - Summary of the required fix based on analysis
-            - Exact file changes needed (line-by-line)
-            - Ready-to-execute commands for implementing the fix
+            STEP 3: Get the current file content
+            Use mcp__github__get_file_contents with owner "abraham2512", repo "cnf-features-deploy", and the path identified in step 2 (likely "ztp/resource-generator/Containerfile").
 
-            Complete these steps now.
+            STEP 4: Create the fix branch
+            Use mcp__github__create_branch with:
+            - owner: "abraham2512"
+            - repo: "cnf-features-deploy"
+            - branch: "cve-fix-issue-${{ env.ISSUE_NUMBER }}"
+            - from_branch: "master"
+
+            STEP 5: Apply the fix
+            Use mcp__github__create_or_update_file to modify the file with the security fix. Add the fix at the appropriate location (typically before the USER instruction in containers).
+
+            STEP 6: Report success
+            Use mcp__github__add_issue_comment to post a comment with:
+            - Summary of changes made
+            - Branch name created
+            - Ready for PR creation
+
+            Execute these steps now to create the fix branch.
