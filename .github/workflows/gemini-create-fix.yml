@@ -100,16 +100,4 @@ jobs:
               ]
             }
           prompt: |-
-            TASK: Add security fix to ztp/resource-generator/Containerfile for issue #${{ env.ISSUE_NUMBER }}.
-
-            REPOSITORY: ${{ env.REPOSITORY }} (owner: abraham2512, repo: cnf-features-deploy)
-
-            DO THIS EXACTLY:
-
-            1. Use mcp__github__get_issue_comments with owner "abraham2512" and repo "cnf-features-deploy" to read issue #${{ env.ISSUE_NUMBER }} comments
-            2. Use mcp__github__get_file_contents with owner "abraham2512", repo "cnf-features-deploy", path "ztp/resource-generator/Containerfile"
-            3. Use mcp__github__create_branch with owner "abraham2512", repo "cnf-features-deploy" to create branch "cve-fix" from master
-            4. Use mcp__github__create_or_update_file with owner "abraham2512", repo "cnf-features-deploy" to add "RUN chmod 644 /etc/passwd" to the Containerfile
-            5. Use mcp__github__add_issue_comment with owner "abraham2512", repo "cnf-features-deploy" to post: "CVE fix branch 'cve-fix' created with /etc/passwd permissions fix"
-
-            Start now.
+            Test MCP tools: Use mcp__github__get_issue to get issue #${{ env.ISSUE_NUMBER }} from abraham2512/cnf-features-deploy. Then post a comment saying "MCP tools working!"
