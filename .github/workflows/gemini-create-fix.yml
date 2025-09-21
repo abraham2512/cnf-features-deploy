@@ -38,6 +38,7 @@ jobs:
 
       - name: 'Run Gemini CLI - Create Fix'
         id: 'run_gemini_create_fix'
+        timeout-minutes: 5
         uses: 'google-github-actions/run-gemini-cli@v0' # ratchet:exclude
         env:
           TITLE: '${{ github.event.issue.title }}'
@@ -93,32 +94,20 @@ jobs:
               }
             }
           prompt: |-
-            You are a security engineer implementing CVE fixes for repository ${{ env.REPOSITORY }}.
+            You are a security engineer analyzing CVE fix implementation for repository ${{ env.REPOSITORY }}.
 
-            TASK: Implement the CVE fix for issue #${{ env.ISSUE_NUMBER }} based on the auto-triage analysis.
+            TASK: Analyze the CVE and provide implementation guidance for issue #${{ env.ISSUE_NUMBER }}.
 
-            Repository context:
-            - Contains cnf-tests and ztp-site-generate containers
-            - The ztp-site-generate container is built from ztp/resource-generator/Containerfile (not Dockerfile!)
-            - Look for Containerfile in ztp/resource-generator/ directory
+            STEP 1: Read the auto-triage analysis
+            Use mcp__github__get_issue_comments with owner "abraham2512" and repo "cnf-features-deploy" to read issue #${{ env.ISSUE_NUMBER }} comments and find the CVE analysis.
 
-            IMPORTANT: Only work with files in THIS repository, do not access external URLs or GitLab links
+            STEP 2: Examine the current container file
+            Use mcp__github__get_file_contents with owner "abraham2512", repo "cnf-features-deploy", path "ztp/resource-generator/Containerfile" to examine the current configuration.
 
-            STEP 1: Read the CVE analysis
-            - Use mcp__github__get_issue_comments with owner "abraham2512" and repo "cnf-features-deploy" to read issue #${{ env.ISSUE_NUMBER }} comments
-            - Find the auto-triage analysis to understand the specific fix needed
+            STEP 3: Post implementation guidance
+            Use mcp__github__add_issue_comment with owner "abraham2512", repo "cnf-features-deploy" to post:
+            - Summary of the required fix based on analysis
+            - Exact file changes needed (line-by-line)
+            - Ready-to-execute commands for implementing the fix
 
-            STEP 2: Identify and examine files
-            - Use mcp__github__get_file_contents with owner "abraham2512", repo "cnf-features-deploy", path "ztp/resource-generator/Containerfile"
-            - Examine the current container configuration
-
-            STEP 3: Implement the fix
-            - Use mcp__github__create_branch with owner "abraham2512", repo "cnf-features-deploy" to create branch "cve-fix-${{ env.ISSUE_NUMBER }}" from master
-            - Use mcp__github__create_or_update_file with owner "abraham2512", repo "cnf-features-deploy" to implement the security fix
-            - Add the specific CVE fix as identified in the analysis
-
-            STEP 4: Create pull request and notify
-            - Create a pull request for the fix branch
-            - Use mcp__github__add_issue_comment with owner "abraham2512", repo "cnf-features-deploy" to post completion status
-
-            Start with Step 1.
+            Complete these steps now.
