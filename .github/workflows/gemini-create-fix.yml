@@ -36,11 +36,6 @@ jobs:
           permission-issues: 'write'
           permission-pull-requests: 'write'
 
-      - name: 'Checkout repository'
-        uses: 'actions/checkout@v4'
-        with:
-          token: '${{ steps.mint_identity_token.outputs.token || secrets.GITHUB_TOKEN || github.token }}'
-
       - name: 'Run Gemini CLI - Create Fix'
         id: 'run_gemini_create_fix'
         uses: 'google-github-actions/run-gemini-cli@v0' # ratchet:exclude
@@ -64,30 +59,66 @@ jobs:
           gemini_model: '${{ vars.GEMINI_MODEL }}'
           settings: |-
             {
-              "maxSessionTurns": 75,
+              "maxSessionTurns": 50,
               "telemetry": {
                 "enabled": ${{ vars.GOOGLE_CLOUD_PROJECT != '' }},
                 "target": "gcp"
               },
-              "coreTools": [
-                "run_shell_command(find)",
-                "run_shell_command(grep)",
-                "run_shell_command(cat)",
-                "run_shell_command(head)",
-                "run_shell_command(tail)"
-              ]
+              "mcpServers": {
+                "github": {
+                  "command": "docker",
+                  "args": [
+                    "run",
+                    "-i",
+                    "--rm",
+                    "-e",
+                    "GITHUB_PERSONAL_ACCESS_TOKEN",
+                    "ghcr.io/github/github-mcp-server"
+                  ],
+                  "includeTools": [
+                    "add_issue_comment",
+                    "get_issue",
+                    "get_issue_comments",
+                    "create_branch",
+                    "create_or_update_file",
+                    "get_file_contents",
+                    "search_code",
+                    "list_commits",
+                    "get_commit"
+                  ],
+                  "env": {
+                    "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
+                  }
+                }
+              }
             }
           prompt: |-
-            TASK: Add security fix to ztp/resource-generator/Containerfile for issue #${{ env.ISSUE_NUMBER }}.
+            You are a security engineer implementing CVE fixes for repository ${{ env.REPOSITORY }}.
 
-            REPOSITORY: ${{ env.REPOSITORY }} (owner: abraham2512, repo: cnf-features-deploy)
+            TASK: Implement the CVE fix for issue #${{ env.ISSUE_NUMBER }} based on the auto-triage analysis.
 
-            Steps:
-            1. Use run_shell_command to find the Containerfile: find . -name "Containerfile" -type f
-            2. Use run_shell_command to read it: cat ztp/resource-generator/Containerfile
-            3. Use run_shell_command to create a branch: git checkout -b cve-fix-${{ env.ISSUE_NUMBER }}
-            4. Use run_shell_command to add the fix: echo 'RUN chmod 644 /etc/passwd' >> ztp/resource-generator/Containerfile
-            5. Use run_shell_command to commit: git add . && git commit -m "fix: add CVE-2025-7195 security fix"
-            6. Use run_shell_command to push: git push origin cve-fix-${{ env.ISSUE_NUMBER }}
+            Repository context:
+            - Contains cnf-tests and ztp-site-generate containers
+            - The ztp-site-generate container is built from ztp/resource-generator/Containerfile (not Dockerfile!)
+            - Look for Containerfile in ztp/resource-generator/ directory
 
-            Execute these steps using the available shell commands.
+            IMPORTANT: Only work with files in THIS repository, do not access external URLs or GitLab links
+
+            STEP 1: Read the CVE analysis
+            - Use mcp__github__get_issue_comments with owner "abraham2512" and repo "cnf-features-deploy" to read issue #${{ env.ISSUE_NUMBER }} comments
+            - Find the auto-triage analysis to understand the specific fix needed
+
+            STEP 2: Identify and examine files
+            - Use mcp__github__get_file_contents with owner "abraham2512", repo "cnf-features-deploy", path "ztp/resource-generator/Containerfile"
+            - Examine the current container configuration
+
+            STEP 3: Implement the fix
+            - Use mcp__github__create_branch with owner "abraham2512", repo "cnf-features-deploy" to create branch "cve-fix-${{ env.ISSUE_NUMBER }}" from master
+            - Use mcp__github__create_or_update_file with owner "abraham2512", repo "cnf-features-deploy" to implement the security fix
+            - Add the specific CVE fix as identified in the analysis
+
+            STEP 4: Create pull request and notify
+            - Create a pull request for the fix branch
+            - Use mcp__github__add_issue_comment with owner "abraham2512", repo "cnf-features-deploy" to post completion status
+
+            Start with Step 1.
