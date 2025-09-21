@@ -51,7 +51,7 @@ RUN mkdir -p $ZTP_HOME
 WORKDIR $ZTP_HOME
 ENV TELCO_REF=resource-generator/telco-reference/telco-ran/configuration
 COPY --from=builder $BUILDER_ZTP/$TELCO_REF/source-crs source-crs
-COPY --from=builder $BUILDER_ZTP/$TELCO_REF/source-crs/extra-manifest extra-manifest
+COPY --from=builder $BUILDER_ZTP/$TELCO_REF/extra-manifest extra-manifest
 COPY --from=builder $BUILDER_ZTP/$TELCO_REF/argocd argocd
 COPY --from=builder $BUILDER_ZTP/$TELCO_REF/kube-compare-reference reference
 RUN chown -R 1001:1001 $ZTP_HOME
@@ -65,11 +65,15 @@ COPY --from=builder $BUILDER_ZTP/tools/siteconfig-converter/siteconfig-converter
 COPY --from=builder $BUILDER_ZTP/siteconfig-generator/siteconfig-generator /usr/bin
 RUN mkdir -p /kustomize-pgt2acmpg/policy.open-cluster-management.io
 COPY --from=builder $BUILDER_ZTP/tools/pgt2acmpg/kustomize /kustomize-pgt2acmpg
+
+# Harden permissions for /etc/passwd to mitigate CVE-2025-7195
+RUN chmod 644 /etc/passwd
+
 USER 1001
 CMD entrypoints
 
-# Note: any edits made to this file MUST be manually synchronised with the midstream build configuration:
+# Note: any edits made to this file MUST be manually synchronized with the midstream build configuration:
 # - please choose appropriate branch:
-# https://gitlab.cee.redhat.com/cpaas-midstream/telco-5g-ran/ztp-site-generate/-/blob/rhaos-4.16-rhel-9/distgit/containers/ztp-site-generate/Dockerfile.in?ref_type=heads
+# https://gitlab.cee.redhat.com/cpaas-midstream/telco-5g-ran-ztp-site-generate/-/blob/rhaos-4.16-rhel-9/distgit/containers/ztp-site-generate/Dockerfile.in?ref_type=heads
 # - include cpaas owners as reviewers: @Nishant Parekh , @rauherna
 # Warning: before updating builder image version, make sure the argocd container has the same version
