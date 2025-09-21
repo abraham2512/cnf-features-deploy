@@ -61,7 +61,7 @@ jobs:
           gemini_model: '${{ vars.GEMINI_MODEL }}'
           settings: |-
             {
-              "maxSessionTurns": 10,
+              "maxSessionTurns": 15,
               "telemetry": {
                 "enabled": ${{ vars.GOOGLE_CLOUD_PROJECT != '' }},
                 "target": "gcp"
@@ -94,6 +94,7 @@ jobs:
 
             REPOSITORY CONTEXT: This repository contains container definitions for CNF features:
             - ztp-site-generate container: ztp/resource-generator/Containerfile
+            - When triage mentions "Dockerfile for ztp-site-generate", use ztp/resource-generator/Containerfile
             - Other containers may be in subdirectories with Dockerfile or Containerfile names
 
             TASK: Create a fix branch for issue #${{ env.ISSUE_NUMBER }} based on the auto-triage analysis.
@@ -109,12 +110,14 @@ jobs:
             Use mcp__github__create_branch with owner="abraham2512", repo="cnf-features-deploy", branch="cve-fix-issue-${{ env.ISSUE_NUMBER }}-${{ github.run_number }}", from_branch="master"
 
             STEP 3 - APPLY SECURITY FIX:
-            Based on the triage analysis, use mcp__github__create_or_update_file to:
+            Based on the triage analysis, use ONLY mcp__github__create_or_update_file to:
             - For ztp-site-generate container: modify "ztp/resource-generator/Containerfile"
             - For other containers: identify the correct Dockerfile/Containerfile path
-            - Add the security fix command before USER instructions
+            - Add the security fix command before USER instructions (typically around line 67)
             - Common security fixes: RUN chmod 644 /etc/passwd, package updates, etc.
             - Use a descriptive commit message mentioning the CVE
+            - DO NOT use shell commands or try to read current file content
+            - Apply fix directly using MCP tools only
 
             STEP 4 - REPORT SUCCESS:
             Use mcp__github__add_issue_comment to post:
