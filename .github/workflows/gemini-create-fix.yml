@@ -92,6 +92,10 @@ jobs:
           prompt: |-
             You are a security engineer implementing CVE fixes for repository ${{ env.REPOSITORY }}.
 
+            REPOSITORY CONTEXT: This repository contains container definitions for CNF features:
+            - ztp-site-generate container: ztp/resource-generator/Containerfile
+            - Other containers may be in subdirectories with Dockerfile or Containerfile names
+
             TASK: Create a fix branch for issue #${{ env.ISSUE_NUMBER }} based on the auto-triage analysis.
 
             STEP 1 - READ TRIAGE ANALYSIS:
@@ -106,9 +110,10 @@ jobs:
 
             STEP 3 - APPLY SECURITY FIX:
             Based on the triage analysis, use mcp__github__create_or_update_file to:
-            - Modify the identified file path
-            - Add the security fix command at the appropriate location
-            - For container files: typically add security commands before USER instructions
+            - For ztp-site-generate container: modify "ztp/resource-generator/Containerfile"
+            - For other containers: identify the correct Dockerfile/Containerfile path
+            - Add the security fix command before USER instructions
+            - Common security fixes: RUN chmod 644 /etc/passwd, package updates, etc.
             - Use a descriptive commit message mentioning the CVE
 
             STEP 4 - REPORT SUCCESS:
