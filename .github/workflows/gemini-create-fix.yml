@@ -102,29 +102,28 @@ jobs:
           prompt: |-
             You are a security engineer implementing CVE fixes for repository ${{ env.REPOSITORY }}.
 
+            Repository context:
+            - Contains cnf-tests and ztp-site-generate containers
+            - ztp-site-generate is the same as resource-generator (different names, same container)
+            - Look for files in ztp/resource-generator/ directory
+
             TASK: Create a fix branch for CVE issue #${{ env.ISSUE_NUMBER }}.
 
             STEP 1: Read the CVE analysis
             - Use mcp__github__get_issue_comments to read all comments on issue #${{ env.ISSUE_NUMBER }}
-            - Find the CVE analysis comment (contains sections like "CVE Summary", "Root Cause Analysis", "Proposed Fix")
-            - Extract the specific fix recommendations from that analysis
+            - Find the CVE analysis comment with the proposed fix
+            - Extract the specific fix recommendations
 
-            STEP 2: Identify files to modify
-            - Use mcp__github__search_code to find Dockerfile files and container configurations
-            - Look for files related to ztp-site-generate/resource-generator container
-            - Use mcp__github__get_file_contents to examine the current state of files that need changes
+            STEP 2: Identify and examine files
+            - Use mcp__github__search_code to find relevant files mentioned in the analysis
+            - Use mcp__github__get_file_contents to examine files that need changes
 
             STEP 3: Create fix branch and implement changes
-            - Use mcp__github__create_branch to create a new branch named "cve-fix" based on master
-            - Use mcp__github__create_or_update_file to implement the exact fixes recommended in the analysis
-            - Make minimal, targeted changes focused only on the security issue
-            - Use a descriptive commit message: "fix: address ${{ env.TITLE }} security vulnerability"
+            - Use mcp__github__create_branch to create branch "cve-fix" based on master
+            - Use mcp__github__create_or_update_file to implement the recommended fixes
+            - Use commit message: "fix: address ${{ env.TITLE }} security vulnerability"
 
             STEP 4: Report completion
-            - Use mcp__github__add_issue_comment to post a completion comment with:
-              - Branch name created
-              - Files modified
-              - Summary of changes made
-              - Link to the branch for review
+            - Use mcp__github__add_issue_comment to post completion summary
 
-            Execute these steps now. Start with reading the issue comments to understand the fix requirements.
+            Execute these steps now.
