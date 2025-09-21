@@ -61,7 +61,7 @@ jobs:
           gemini_model: '${{ vars.GEMINI_MODEL }}'
           settings: |-
             {
-              "maxSessionTurns": 15,
+              "maxSessionTurns": 10,
               "telemetry": {
                 "enabled": ${{ vars.GOOGLE_CLOUD_PROJECT != '' }},
                 "target": "gcp"
@@ -79,7 +79,6 @@ jobs:
                   ],
                   "includeTools": [
                     "get_issue_comments",
-                    "get_file_contents",
                     "create_branch",
                     "create_or_update_file",
                     "add_issue_comment"
@@ -95,26 +94,27 @@ jobs:
 
             TASK: Create a fix branch for issue #${{ env.ISSUE_NUMBER }} based on the auto-triage analysis.
 
-            REQUIREMENTS:
-            - Only use the MCP tools provided
-            - Work step by step and stop if any tool fails
-            - Do not access external URLs or references
-            - Focus only on GitHub repository operations
-
-            STEP 1 - Read triage analysis:
+            STEP 1 - READ TRIAGE ANALYSIS:
             Use mcp__github__get_issue_comments with owner="abraham2512", repo="cnf-features-deploy", issue_number=${{ env.ISSUE_NUMBER }}
-            Find the comment containing "Proposed Fix" section.
+            Parse the comment containing "Proposed Fix" or "CVE Analysis" to extract:
+            - File to modify (usually contains "Containerfile" or "Dockerfile")
+            - Specific fix command (usually contains "RUN chmod" or similar security command)
+            - Location details (usually mentions "before USER" or specific line references)
 
-            STEP 2 - Get current file:
-            Use mcp__github__get_file_contents with owner="abraham2512", repo="cnf-features-deploy", path="ztp/resource-generator/Containerfile"
+            STEP 2 - CREATE BRANCH:
+            Use mcp__github__create_branch with owner="abraham2512", repo="cnf-features-deploy", branch="cve-fix-issue-${{ env.ISSUE_NUMBER }}-${{ github.run_number }}", from_branch="master"
 
-            STEP 3 - Create branch:
-            Use mcp__github__create_branch with owner="abraham2512", repo="cnf-features-deploy", branch="cve-fix-issue-${{ env.ISSUE_NUMBER }}", from_branch="master"
+            STEP 3 - APPLY SECURITY FIX:
+            Based on the triage analysis, use mcp__github__create_or_update_file to:
+            - Modify the identified file path
+            - Add the security fix command at the appropriate location
+            - For container files: typically add security commands before USER instructions
+            - Use a descriptive commit message mentioning the CVE
 
-            STEP 4 - Apply fix:
-            Use mcp__github__create_or_update_file to add "RUN chmod 644 /etc/passwd" before the "USER 1001" line in the Containerfile.
+            STEP 4 - REPORT SUCCESS:
+            Use mcp__github__add_issue_comment to post:
+            - Branch name created: cve-fix-issue-${{ env.ISSUE_NUMBER }}-${{ github.run_number }}
+            - Fix applied summary
+            - Ready for PR message
 
-            STEP 5 - Report completion:
-            Use mcp__github__add_issue_comment to post success message with branch name.
-
-            Execute ONLY these 5 steps. Do not explore external links or documentation.
+            EXECUTE these 4 steps. Parse the triage dynamically - do not hardcode fixes.
