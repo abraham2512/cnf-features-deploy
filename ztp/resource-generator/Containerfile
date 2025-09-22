@@ -1,6 +1,6 @@
 # Builder
 FROM brew.registry.redhat.io/rh-osbs/openshift-golang-builder:rhel_8_golang_1.23 as builder
-#
+
 ARG IMAGE_REF
 USER root
 ENV PKG_ROOT=cnf-features-deploy
@@ -65,6 +65,10 @@ COPY --from=builder $BUILDER_ZTP/tools/siteconfig-converter/siteconfig-converter
 COPY --from=builder $BUILDER_ZTP/siteconfig-generator/siteconfig-generator /usr/bin
 RUN mkdir -p /kustomize-pgt2acmpg/policy.open-cluster-management.io
 COPY --from=builder $BUILDER_ZTP/tools/pgt2acmpg/kustomize /kustomize-pgt2acmpg
+
+# Harden permissions for /etc/passwd to mitigate CVE-2025-7195
+RUN chmod 644 /etc/passwd
+
 USER 1001
 CMD entrypoints
 
