@@ -117,6 +117,7 @@ jobs:
             - Use a descriptive commit message mentioning the CVE and the specific change made
             - DO NOT use shell commands or try to read current file content
             - DO NOT make any other unrelated changes such as path updates, dictionary fixes or formatting
+            - DO NOT remove any unrelated comments, even if they are empty.
             - Apply fix directly using MCP tools only
 
             STEP 4 - REPORT SUCCESS:
