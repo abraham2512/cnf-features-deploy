@@ -4,27 +4,32 @@
     "automergeType": "pr",
     "prConcurrentLimit": 0,
     "dockerfile": {
-        "autoApprove": true,
-        "automerge": true,
         "enabled": true,
-        "fileMatch": [
-            "\\.conf$"
-        ],
         "ignoreTests": false,
-        "platformAutomerge": true,
         "schedule": [
             "at any time"
+        ],
+        "packageRules": [
+            {
+                "matchPackageNames": ["*"],
+                "addLabels": [
+                    "approved",
+                    "lgtm"
+                ],
+                "automerge": true
+            }
         ]
     },
     "gomod": {
         "enabled": false
     },
     "pruneBranchAfterAutomerge": true,
+    "rpmVulnerabilityAutomerge": "ALL",
     "tekton": {
         "enabled": true,
-        "fileMatch": [
-            "\\.yaml$",
-            "\\.yml$"
+        "managerFilePatterns": [
+            "/\\.yaml$/",
+            "/\\.yml$/"
         ],
         "ignoreTests": false,
         "includePaths": [

@@ -44,12 +44,11 @@ COPY . .
 RUN make test-bin
 
 # Container runtime image
-FROM registry.access.redhat.com/ubi9/ubi-minimal:9.6@sha256:2f06ae0e6d3d9c4f610d32c480338eef474867f435d8d28625f2985e8acde6e8
-#
+FROM registry.access.redhat.com/ubi9/ubi-minimal:latest
 
 RUN mkdir -p /usr/local/etc/cnf
 RUN microdnf install -y lksctp-tools iproute \
-      ethtool iputils procps-ng numactl-libs iptables \
+      ethtool iputils procps-ng numactl-libs iptables nftables \
       kmod realtime-tests linuxptp iperf3 nc findutils \
       python3 # python3 is needed for hwlatdetect
 
@@ -77,7 +76,8 @@ ENV DPDK_TESTS_IMAGE=dpdk-base-rhel9:v${OCP_VERSION}
 CMD ["/usr/bin/test-run.sh"]
 
 LABEL com.redhat.component="cnf-tests-container" \
-      name="openshift4/cnf-tests" \
+      name="openshift4/cnf-tests-rhel9" \
+      cpe="cpe:/a:redhat:openshift:4.22::el9" \
       summary="Cluster verification tests image" \
       io.openshift.expose-services="" \
       io.openshift.tags="data,images" \
@@ -86,4 +86,5 @@ LABEL com.redhat.component="cnf-tests-container" \
       io.openshift.maintainer.product="OpenShift Container Platform" \
       io.k8s.description="Cluster verification tests image" \
       maintainer="cnf-devel@redhat.com" \
-      description="Cluster verification tests image"
+      description="Cluster verification tests image" \
+      url="https://github.com/openshift-kni/cnf-features-deploy"
